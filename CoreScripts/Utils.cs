@@ -4,6 +4,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using UnityEngine;
+using UnityEngine.UI;
 namespace RTI
 {
     public static class Utils
@@ -78,6 +80,69 @@ namespace RTI
             return allTypes;
         }
 #endif
+
+        public struct InputFieldModel
+        {
+            public InputFieldModel(Type[] types, TouchScreenKeyboardType keyboardType, InputField.ContentType contentType)
+            {
+                this.types = new List<Type>(types);
+                this.keyboardType = keyboardType;
+                this.contentType = contentType;
+            }
+            public List<Type> types;
+            public TouchScreenKeyboardType keyboardType;
+            public InputField.ContentType contentType;
+        }
+        static List<InputFieldModel> inputFieldModels;
+        /// <summary>
+        /// 输入框配置与类型的关联集合
+        /// </summary>
+        /// <value></value>
+        public static List<InputFieldModel> InputFieldModels
+        {
+            get
+            {
+                if (inputFieldModels == null)
+                {
+                    inputFieldModels = new List<InputFieldModel>(){
+                            new InputFieldModel(
+                                new Type[] { typeof(decimal),typeof(byte),typeof(Int16), typeof(Int32), typeof(Int64) },
+                                TouchScreenKeyboardType.NumberPad,
+                                InputField.ContentType.IntegerNumber
+                            ),
+                            new InputFieldModel(
+                                new Type[] { typeof(Single), typeof(Double)},
+                                 TouchScreenKeyboardType.NumbersAndPunctuation,
+                                InputField.ContentType.DecimalNumber
+                            ),
+                            new InputFieldModel(
+                                new Type[]{ typeof(string), typeof(char) },
+                                 TouchScreenKeyboardType.Default,
+                                 InputField.ContentType.Standard)
+                        };
+                }
+                return inputFieldModels;
+            }
+        }
+        /// <summary>
+        /// 自动根据一种c#基础数值类型为该 inputField 配置合适的输入模式。
+        /// </summary>
+        /// <param name="inputField"></param>
+        /// <param name="type"></param>
+        public static void ModelizeInputFieldByType(InputField inputField, Type type)
+        {
+            //fixme 考虑更多基础类型
+            foreach (var model in InputFieldModels)
+            {
+                if (model.types.Contains(type))
+                {
+                    //发现了匹配的model，开始配置
+                    inputField.keyboardType = model.keyboardType;
+                    inputField.contentType = model.contentType;
+                    break;
+                }
+            }
+        }
 
     }
 }

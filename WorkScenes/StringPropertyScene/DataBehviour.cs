@@ -4,14 +4,17 @@ using UnityEngine;
 using RTI;
 public class DataBehviour : MonoBehaviour
 {
-    [Field("string")]
-    public string data;
+    [RTI.Field("string")]
+    public string stdata;
+    [RTI.Field("integer")]
+    public int inData;
+    [RTI.Field("float")]
+    public float flData;
     void Start()
     {
         //FindObjectOfType<StringFieldUIBehaviour>().Bind(this);
-        Debug.Log(this.GetType().IsAssignableFrom(this.GetType()));
-        Debug.Log(this.GetType().IsAssignableFrom(typeof(MonoBehaviour)));
-        Debug.Log(typeof(MonoBehaviour).IsAssignableFrom(this.GetType()));
+        InspectorManager.Instance.Initialize();
+        InspectorManager.Instance.Inspect(this);
     }
 
     // Update is called once per frame

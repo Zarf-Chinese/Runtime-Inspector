@@ -1,54 +1,58 @@
 using System;
-using System.Reflection;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using System.Collections.Generic;
 namespace RTI
 {
     public class InspectorBehaviour : MonoBehaviour
     {
-        List<Type> FieldAttributeTypes = new List<Type>();
-        List<Type> UIBehaviourTypes = new List<Type>();
-        /// <summary>
-        /// 所有记录在册的检索器预置
-        /// </summary>
-        public List<GameObject> RTIUIPrefabs;
-        /// <summary>
-        /// 初始化运行时检索器。
-        /// 在初始化过程中，检索器会完成以下任务：
-        /// * 检查并记录所有已定义的FieldAttribute及其派生类型
-        /// * 检查并记录所有已定义并在RTUIPrefabs中存在的UIBehaviour派生类型
-        /// </summary>
-        public virtual void Initialize()
+        [Tooltip("用以装填子检索器的内容对象")]
+        [SerializeField]
+        private RectTransform content;
+        public RectTransform Content
         {
-            var types = Utils.GetAllTypes();
-            this.FieldAttributeTypes.Clear();
-            this.UIBehaviourTypes.Clear();
-            foreach (var type in types)
+            get
             {
-                if (typeof(FieldAttribute).IsAssignableFrom(type))
+                if (!this.content)
                 {
-                    //如果是FieldAttribute或其派生
-                    this.FieldAttributeTypes.Add(type);
+                    this.content = this.GetComponent<RectTransform>();
                 }
-                else if (typeof(UIBehaviour).IsAssignableFrom(type))
-                {
-                    //如果是UIBehaivour或其派生
-                    this.UIBehaviourTypes.Add(type);
-                    //检查是否在prefabs中存在
-                }
+                return this.content;
             }
         }
+        [SerializeField]
+        private List<InspectorBehaviour> children;
         /// <summary>
-        /// 检索该游戏对象，返回一个携带了RTUIBehaviour的UI游戏对象
+        /// 所有次级索引器
         /// </summary>
-        /// <param name="target"></param>
-        public virtual void Inspect(object target)
+        /// <value></value>
+        public List<InspectorBehaviour> Children { get => this.children; }
+        /// <summary>
+        /// 向本索引器中添入次级索引器
+        /// * **注意，不是所有索引器都对次级索引器的功能具有完善的支持！**
+        /// </summary>
+        /// <param name="child"></param>
+        public virtual void AddChild(GameObject child)
         {
-            //fixme 尝试bind每一个UIPrefab
-            foreach (var uiBehaviourType in this.UIBehaviourTypes)
+            var childTransform = (child.GetComponent<RectTransform>());
+            var childInspector = child.GetComponent<InspectorBehaviour>();
+            this.Children.Add(childInspector);
+            childTransform.SetParent(Content, false);
+        }
+        /// <summary>
+        /// 从本索引器中移除该次级索引器
+        /// * **注意，不是所有索引器都对次级索引器的功能具有完善的支持！**
+        /// </summary>
+        /// <param name="child"></param>
+        public virtual void RemoveChild(GameObject child)
+        {
+            var childTransform = (child.GetComponent<RectTransform>());
+            var childInspector = child.GetComponent<InspectorBehaviour>();
+            if (this.Children.Contains(childInspector))
             {
-                //检查并尝试bind
+                this.Children.Remove(childInspector);
             }
+            childTransform.SetParent(null, false);
         }
     }
 }

@@ -6,19 +6,26 @@ using System.Reflection;
 namespace RTI
 {
     [AttributeUsage(AttributeTargets.Field, Inherited = true)]
-    public class FieldAttribute : Attribute
+    public class FieldAttribute : MemberAttribute
     {
-        public FieldInfo field;
-        public System.Type hostType;
-        public virtual object GetFieldData(object host)
+
+        public FieldAttribute(string type) : base(type)
         {
-            return field.GetValue(host);
         }
-        public virtual void SetFieldData(object host, object value)
+
+        public override Type GetMemberType()
         {
-            field.SetValue(host, value);
+            return (member as FieldInfo).FieldType;
         }
-        public string Type { get; private set; }
-        public FieldAttribute(string type) { this.Type = type; }
+
+        public override object GetMemberData(object host)
+        {
+            var ret = (member as FieldInfo).GetValue(host);
+            return ret;
+        }
+        public override void SetMemberData(object host, object value)
+        {
+            (member as FieldInfo).SetValue(host, value);
+        }
     }
 }
