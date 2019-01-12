@@ -10,13 +10,6 @@ namespace RTI
     [UnityEngine.DisallowMultipleComponent]
     public class MemberInspector : InspectorBehaviour
     {
-        [Tooltip("用于显示类成员名称的Text")]
-        public Text nameField;
-        public override string Name
-        {
-            get => nameField.text;
-            set => nameField.text = value;
-        }
         public List<string> keys;
         public virtual bool IsFit(string key)
         {

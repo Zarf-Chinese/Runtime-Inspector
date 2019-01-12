@@ -8,6 +8,7 @@ namespace RTI
     public class InspectorManager : MonoBehaviour
     {
         public InspectorBehaviour rootInspector;
+        public InspectorAsset asset;
         private static InspectorManager instance;
         /// <summary>
         /// InspectorBehaviour的唯一实例
@@ -20,6 +21,10 @@ namespace RTI
                 if (!instance)
                 {
                     instance = FindObjectOfType<InspectorManager>();
+                    if (!instance)
+                    {
+                        throw new Exception("没有在场景中找到InspectorManager实例！");
+                    }
                     DontDestroyOnLoad(instance.gameObject);
                 }
                 return instance;
@@ -32,7 +37,7 @@ namespace RTI
         /// <summary>
         /// 所有记录在册的检索器预置
         /// </summary>
-        public List<GameObject> allInpectorPrefabList;
+        public List<GameObject> InpectorPrefabList { get { return asset.memberInpectorPrefabList; } }
         /// <summary>
         /// 所有当前可用的检索器预置
         /// </summary>
@@ -54,7 +59,7 @@ namespace RTI
         protected List<GameObject> FindDrawerPrefabsFromListForKey(string key)
         {
             var ret = new List<GameObject>();
-            foreach (var prefab in allInpectorPrefabList)
+            foreach (var prefab in InpectorPrefabList)
             {
                 //若该prefab中的DrawerBehaviour类型的key满足条件...
                 var memberInspector = prefab.GetComponent<MemberInspector>();
@@ -106,20 +111,20 @@ namespace RTI
                     this.MemberAttributeTypes.Add(type);
                 }
             }
-            foreach (var prefab in this.allInpectorPrefabList.AsReadOnly())
+            foreach (var prefab in this.InpectorPrefabList.AsReadOnly())
             {
                 //若预制体中不包含DrawerBehaviour，则将其移除
-                if (!prefab.GetComponent<MemberInspector>()) { this.allInpectorPrefabList.Remove(prefab); }
+                if (!prefab.GetComponent<MemberInspector>()) { this.InpectorPrefabList.Remove(prefab); }
             }
         }
         /// <summary>
         /// 检索该游戏对象，返回一个携带了DrawerBehaviour的UI游戏对象
         /// </summary>
         /// <param name="target"></param>
-        public virtual void Inspect(object target)
+        public virtual void Inspect(object target, string name)
         {
             var hostType = target.GetType();
-
+            this.rootInspector.InspectName = name;
             //检查该object的每一个member
             foreach (var memberInfo in hostType.GetMembers())
             {
@@ -147,6 +152,7 @@ namespace RTI
                     var memberInspector = memberDrawerObject.GetComponent<MemberInspector>();
                     memberInspector.Host = host;
                     memberInspector.memberAttribute = memberAttribute;
+                    memberInspector.InspectName = memberInfo.Name;
                     memberAttribute.member = memberInfo;
                     Interf.Instance.Print("bind Member of {0} successfully from Type {1} !", memberInfo.ToString(), memberInfo.DeclaringType.ToString());
                     return memberDrawerObject;

@@ -5,7 +5,7 @@ using UnityEngine;
 using System.Reflection;
 namespace RTI
 {
-    [AttributeUsage(AttributeTargets.Field, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public class FieldAttribute : MemberAttribute
     {
 

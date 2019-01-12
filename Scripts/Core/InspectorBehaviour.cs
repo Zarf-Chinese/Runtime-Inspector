@@ -6,7 +6,17 @@ namespace RTI
 {
     public class InspectorBehaviour : MonoBehaviour
     {
-        public virtual string Name { get; set; }
+        [Tooltip("用于显示检索目标名称的UI.Text组件")]
+        public Text nameField;
+        /// <summary>
+        /// 要进行检索的目标名称
+        /// </summary>
+        /// <value></value>
+        public virtual string InspectName
+        {
+            get => nameField.text;
+            set => nameField.text = value;
+        }
         [Tooltip("用以装填子检索器的内容对象")]
         [SerializeField]
         private RectTransform content;

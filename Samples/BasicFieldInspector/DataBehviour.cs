@@ -19,7 +19,7 @@ public class DataBehviour : MonoBehaviour
     {
         //FindObjectOfType<StringFieldUIBehaviour>().Bind(this);
         InspectorManager.Instance.Initialize();
-        InspectorManager.Instance.Inspect(this);
+        InspectorManager.Instance.Inspect(this, "object name");
         // test<int>();
         // test<double>();
         // test<string>();
