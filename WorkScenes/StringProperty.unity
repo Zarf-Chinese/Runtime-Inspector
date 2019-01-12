@@ -166,7 +166,7 @@ MonoBehaviour:
     m_Right: 2
     m_Top: 2
     m_Bottom: 2
-  m_ChildAlignment: 0
+  m_ChildAlignment: 4
   m_Spacing: 3
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
@@ -639,7 +639,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5899347c8fdfc7d4e933eeaca079870c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  data: bilbiili
+  stdata: 
+  inData: 0
+  flData: 0
 --- !u!1 &1202728162
 GameObject:
   m_ObjectHideFlags: 0
@@ -1037,8 +1039,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rootInspector: {fileID: 1267583451}
-  allDrawerPrefabList:
+  allInpectorPrefabList:
   - {fileID: 9156325524833134488, guid: cd46c5ebc01d9dc48974be9af65d2a4f, type: 3}
+  - {fileID: 1185827734057672882, guid: 8366ad3f41fb2584e8dfac2a78634d3a, type: 3}
 --- !u!1 &1856498009
 GameObject:
   m_ObjectHideFlags: 0

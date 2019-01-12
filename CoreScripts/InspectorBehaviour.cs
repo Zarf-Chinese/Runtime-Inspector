@@ -21,7 +21,7 @@ namespace RTI
             }
         }
         [SerializeField]
-        private List<InspectorBehaviour> children;
+        private List<InspectorBehaviour> children = new List<InspectorBehaviour>();
         /// <summary>
         /// 所有次级索引器
         /// </summary>
