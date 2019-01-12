@@ -22,12 +22,7 @@ namespace RTI
         public virtual void ChangeByStep(bool more = true)
         {
             var delta = more ? this.step : -this.step;
-            int i = 10;
-            double test = i;
-            double test2 = (double)i;
-            var memberData = (this.MemberData);
-            var targetValue = (double)Convert.ChangeType(memberData, typeof(double)) + delta;
-            this.MemberData = Convert.ChangeType(targetValue, this.MemberType);
+            this.MemberData = Convert.ChangeType((double)Convert.ChangeType(this.MemberData, typeof(double)) + delta, this.MemberType);
         }
     }
 }

@@ -6,6 +6,7 @@ namespace RTI
 {
     public class InspectorBehaviour : MonoBehaviour
     {
+        public virtual string Name { get; set; }
         [Tooltip("用以装填子检索器的内容对象")]
         [SerializeField]
         private RectTransform content;

@@ -4,18 +4,28 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Events;
 using System.Reflection;
+using UnityEngine.UI;
 namespace RTI
 {
     [UnityEngine.DisallowMultipleComponent]
     public class MemberInspector : InspectorBehaviour
     {
+        [Tooltip("用于显示类成员名称的Text")]
+        public Text nameField;
+        public override string Name
+        {
+            get => nameField.text;
+            set => nameField.text = value;
+        }
         public List<string> keys;
         public virtual bool IsFit(string key)
         {
             return keys.Contains(key);
         }
         /// <summary>
-        /// 数据端的数据内容。对该数据内容进行修改不会影响到工作状态
+        /// 数据端的数据内容，
+        /// 不是一个基础类型，而是一个数据对象。**请使用Equals函数判断相等性**
+        /// 对该数据内容进行修改不会影响到工作状态
         /// </summary>
         /// <value></value>
         public object MemberData

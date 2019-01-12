@@ -11,6 +11,7 @@ namespace RTI
         public InputField inputField;
         /// <summary>
         /// 从输入框中可以得到的数据内容
+        /// 不是一个基础类型，而是一个数据对象。**请使用Equals函数判断相等性**
         /// 对该数据内容进行修改不会影响到工作状态
         /// </summary>
         /// <value></value>
@@ -38,7 +39,17 @@ namespace RTI
         }
         public virtual object GetDataFromInput(string input)
         {
-            return System.Convert.ChangeType(input, this.MemberType);
+            try
+            {
+                return System.Convert.ChangeType(input, this.MemberType);
+            }
+            catch (System.Exception e)
+            {
+                //考虑到部分输入情况会造成类型转换失败，如"."、""等，
+                //如果转换失败，则赋值为0
+                Interf.Instance.Print(e);
+                return System.Convert.ChangeType(0, this.MemberType);
+            }
         }
         public virtual string GetInputFromData(object data)
         {

@@ -8,7 +8,7 @@ public class DataBehviour : MonoBehaviour
     public string stdata;
     [RTI.Field("integer")]
     public int inData;
-    [RTI.Field("float")]
+    [RTI.Field("decimal")]
     public float flData;
     public void test<T>()
     {
