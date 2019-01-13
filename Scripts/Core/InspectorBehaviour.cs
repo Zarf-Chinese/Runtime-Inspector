@@ -43,7 +43,7 @@ namespace RTI
         /// * **注意，不是所有索引器都对次级索引器的功能具有完善的支持！**
         /// </summary>
         /// <param name="child"></param>
-        public virtual void AddChild(GameObject child)
+        public virtual void AddChild(InspectorBehaviour child)
         {
             var childTransform = (child.GetComponent<RectTransform>());
             var childInspector = child.GetComponent<InspectorBehaviour>();
@@ -55,7 +55,7 @@ namespace RTI
         /// * **注意，不是所有索引器都对次级索引器的功能具有完善的支持！**
         /// </summary>
         /// <param name="child"></param>
-        public virtual void RemoveChild(GameObject child)
+        public virtual void RemoveChild(InspectorBehaviour child)
         {
             var childTransform = (child.GetComponent<RectTransform>());
             var childInspector = child.GetComponent<InspectorBehaviour>();

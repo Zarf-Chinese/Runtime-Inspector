@@ -15,5 +15,11 @@ namespace RTI
         /// </summary>
         [Tooltip("所有要使用的类成员检索器预置")]
         public List<GameObject> memberInpectorPrefabList;
+
+        /// <summary>
+        /// 每个BindAttribute都有一个名字，这个列表则记录了要参与到Bind中的所有BindAttribute的名字。
+        /// </summary>
+        [Tooltip("要使用的BindAttribute的名字")]
+        public List<string> activeBindNameList;
     }
 }
