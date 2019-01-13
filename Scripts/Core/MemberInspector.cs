@@ -25,15 +25,18 @@ namespace RTI
         {
             get
             {
-                var ret = this.memberAttribute.GetMemberData(this.Host);
+                var ret = this.inspectInfo.GetMemberData(this.Host);
                 var type = ret.GetType();
                 return ret;
             }
 
-            set => this.memberAttribute.SetMemberData(this.Host, value);
+            set => this.inspectInfo.SetMemberData(this.Host, value);
         }
-        public MemberAttribute memberAttribute;
-        public System.Type MemberType { get => this.memberAttribute.GetMemberType(); }
+        /// <summary>
+        /// 检索类型成员的信息
+        /// </summary>
+        public InspectInfo inspectInfo;
+        public System.Type MemberType { get => this.inspectInfo.MemberType; }
         public object Host
         {
             get => this.host;

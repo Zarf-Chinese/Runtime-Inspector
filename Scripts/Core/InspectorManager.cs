@@ -58,6 +58,43 @@ namespace RTI
         /// </summary>
         protected HashSet<Type> UnBindedTypesCache;
         /// <summary>
+        /// 检索识别过滤器。
+        /// InspectorManager在判断是否要识别并检索某个Member时，会从前向后逐个执行每个过滤器，
+        /// 如果过滤器最终没有得到合法的检索信息，则表明该Member不可被检索。
+        /// </summary>
+        /// <param name="context">执行检索的检索管理器</param>
+        /// <param name="host">宿主对象</param>
+        /// <param name="memberInfo">要尝试检索的类成员信息</param>
+        /// <param name="inspectInfo">上一个过滤器得到的检索信息，同时也会传给下一个过滤器</param>
+        public delegate void InspectInfoFilter(InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo);
+        /// <summary>
+        /// 检索识别过滤器列表。
+        /// InspectorManager在判断是否要识别并检索某个Member时，会从前向后逐个执行每个过滤器，
+        /// 如果过滤器最终没有得到合法的检索信息，则表明该Member不可被检索。
+        /// 过滤器列表是静态的，你可以使用[UnityEngine.RuntimeInitializeOnLoadMethodAttribute]标记来在游戏开始时注册新的过滤器
+        /// </summary>
+        /// <typeparam name="InspectInfoFilter"></typeparam>
+        /// <returns></returns>
+        public static List<InspectInfoFilter> InspectInfoFilters { get; } = new List<InspectInfoFilter>();
+
+        static InspectorManager()
+        {
+            //注册一个使用Attribute的检索识别过滤器
+            InspectInfoFilter AttributeFilter = (InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo) =>
+            {
+                //若inspectInfo尚未定义
+                if (inspectInfo == null)
+                {
+                    var memberAttribute = memberInfo.GetCustomAttribute<MemberAttribute>(true);
+                    if (memberAttribute != null)
+                    {
+                        inspectInfo = memberAttribute.inspectInfo;
+                    }
+                }
+            };
+            InspectInfoFilters.Add(AttributeFilter);
+        }
+        /// <summary>
         /// 为该key在注册表中所有检索器预制体中寻找一个最合适的检索器预置。
         /// > 若未找到，则返回null
         /// </summary>
@@ -110,16 +147,8 @@ namespace RTI
         /// </summary>
         public virtual void Initialize()
         {
-            var types = Utils.GetAllTypes();
+            //清除缓存
             this.MemberAttributeTypes.Clear();
-            foreach (var type in types)
-            {
-                if (typeof(MemberAttribute).IsAssignableFrom(type))
-                {
-                    //如果是MemberAttribute或其派生
-                    this.MemberAttributeTypes.Add(type);
-                }
-            }
             if (this.UsedMemberInspectorPrefabs == null)
             {
                 this.UsedMemberInspectorPrefabs = new Dictionary<string, GameObject>();
@@ -128,8 +157,43 @@ namespace RTI
             {
                 this.UsedMemberInspectorPrefabs.Clear();
             }
-            //重新检查所有存在的Binder并将检索器关键词与相应的类型进行重新绑定
-            this.ReBind();
+
+            //清除已Bind类型的记录
+            if (this.BindedTypes == null)
+            {
+                this.BindedTypes = new Dictionary<Type, string>();
+            }
+            else
+            {
+                this.BindedTypes.Clear();
+            }
+            //清除未Bind类型的缓存
+            if (this.UnBindedTypesCache == null)
+            {
+                this.UnBindedTypesCache = new HashSet<Type>();
+            }
+            else
+            {
+                this.UnBindedTypesCache.Clear();
+            }
+
+            //获取所有类型
+            var types = Utils.GetAllTypes();
+            //记录所有MemberAttribute类型
+            foreach (var type in types)
+            {
+                if (typeof(MemberAttribute).IsAssignableFrom(type))
+                {
+                    //如果是MemberAttribute或其派生
+                    this.MemberAttributeTypes.Add(type);
+                }
+
+            }
+            //将检索器关键词-类型进行绑定
+            foreach (var type in types)
+            {
+                this.TryBind(type);
+            }
         }
         /// <summary>
         /// 检索该游戏对象，返回一个携带了DrawerBehaviour的UI游戏对象
@@ -175,126 +239,92 @@ namespace RTI
             return ret;
         }
         /// <summary>
-        /// 重新进行类型-检索器关键值绑定
+        /// 尝试进行类型-检索器关键值绑定
         /// </summary>
-        public void ReBind()
+        public void TryBind(Type type)
         {
-            //清除已Bind类型的记录
-            if (this.BindedTypes == null)
+            foreach (var member in type.GetMembers())
             {
-                this.BindedTypes = new Dictionary<Type, string>();
-            }
-            else
-            {
-                this.BindedTypes.Clear();
-            }
-            //清除未Bind类型的缓存
-            if (this.UnBindedTypesCache == null)
-            {
-                this.UnBindedTypesCache = new HashSet<Type>();
-            }
-            else
-            {
-                this.UnBindedTypesCache.Clear();
-            }
-            //fixme bind
-            foreach (var type in Utils.GetAllTypes())
-            {
-                foreach (var member in type.GetMembers())
+                BindAttribute bindAttribute = Attribute.GetCustomAttribute(member, typeof(BindAttribute)) as BindAttribute;
+                if (bindAttribute != null && this.asset.activeBindNameList.Contains(bindAttribute.name))
                 {
-                    BindAttribute bindAttribute = Attribute.GetCustomAttribute(member, typeof(BindAttribute)) as BindAttribute;
-                    if (bindAttribute != null && this.asset.activeBindNameList.Contains(bindAttribute.name))
+                    //如果BindAttribute被定义，并且被使用
+                    try
                     {
-                        //如果BindAttribute被定义，并且被使用
-                        try
+                        var value = (member as FieldInfo).GetValue(type);
+                        var binders = (IEnumerable<Binder>)value;
+                        //执行bind
+                        foreach (var binder in binders)
                         {
-                            var value = (member as FieldInfo).GetValue(type);
-                            var binders = (IEnumerable<Binder>)value;
-                            //执行bind
-                            foreach (var binder in binders)
+                            foreach (var t in binder.types)
                             {
-                                foreach (var t in binder.types)
-                                {
-                                    //将binder中输入的每一个Type与对应的Key记录下来
-                                    this.BindedTypes.Add(t, binder.key);
-                                }
+                                //将binder中输入的每一个Type与对应的Key记录下来
+                                this.BindedTypes.Add(t, binder.key);
                             }
                         }
-                        catch (Exception e)
-                        {
-                            //类型转换失败
-                            Interf.Instance.Print("Failed to cast the BindList {0} as IEnumerable<BInder>!", member);
-                        }
+                    }
+                    catch (Exception e)
+                    {
+                        //类型转换失败
+                        Interf.Instance.Print("Failed to cast the BindList {0} as IEnumerable<BInder>!", member);
                     }
                 }
             }
         }
+
+        /// <summary>
+        /// 尝试检索某个Member
+        /// </summary>
+        /// <param name="host"></param>
+        /// <param name="memberInfo"></param>
+        /// <returns></returns>
         public InspectorBehaviour TryInspect(object host, MemberInfo memberInfo)
         {
-            //获取该member上面标注的MemberAttribute
-            var memberAttribute = memberInfo.GetCustomAttribute<MemberAttribute>(true);
-            if (memberAttribute == null)
+            InspectInfo inspectInfo = null;
+            foreach (var inspectInfoFilter in InspectInfoFilters)
             {
-                string key = null;
-                //如果该成员上没有检索标记，则检查该成员的类型上是否有检索标记
-                if (memberInfo.MemberType == MemberTypes.Field)
-                {
-                    //如果类成员是 field
-                    var fieldInfo = memberInfo as FieldInfo;
-                    key = GetBindedKey(fieldInfo.FieldType);
-                    if (key != null)
-                    {
-                        //找到了key
-                        memberAttribute = new FieldAttribute(key);
-                    }
-                }
-                else if (memberInfo.MemberType == MemberTypes.Property)
-                {
-                    //如果类成员是 property
-                    var propertyInfo = memberInfo as PropertyInfo;
-                    key = GetBindedKey(propertyInfo.PropertyType);
-                    if (key != null)
-                    {
-                        //找到了key
-                        memberAttribute = new PropertyAttribute(key);
-                    }
-                }
+                inspectInfoFilter(this, host, memberInfo, ref inspectInfo);
             }
-            if (memberAttribute != null)
-            //如果标记存在
+            if (inspectInfo != null)
             {
-                var prefab = GetMemberInspectorPrefabByKey(memberAttribute.Key);
+                //识别成功，得到了该类成员的检索信息
+                return Inspect(host, memberInfo, inspectInfo);
+            }
+            else
+            {
+                //识别失败
+                return null;
+            }
+        }
+        public MemberInspector Inspect(object host, MemberInfo memberInfo, InspectInfo inspectInfo)
+        {
+            MemberInspector memberInspector = null;
+            if (inspectInfo != null)
+            //如果识别成功
+            {
+                var prefab = GetMemberInspectorPrefabByKey(inspectInfo.Key);
                 if (prefab)
                 {
                     //生成memberInspector，并完成绑定工作
                     var memberDrawerObject = Instantiate(prefab);
-                    var memberInspector = memberDrawerObject.GetComponent<MemberInspector>();
+                    memberInspector = memberDrawerObject.GetComponent<MemberInspector>();
                     if (!memberInspector)
                     {
-                        throw new Exception("在目标检索器预制体中找不到合法的MemberBehviour组件！");
+                        throw new Exception("在目标检索器预制体中找不到合法的MemberInspector组件！");
                     }
                     memberInspector.Host = host;
-                    memberInspector.memberAttribute = memberAttribute;
+                    memberInspector.inspectInfo = inspectInfo;
                     memberInspector.InspectName = memberInfo.Name;
-                    memberAttribute.member = memberInfo;
+                    inspectInfo.member = memberInfo;
                     Interf.Instance.Print("bind Member of {0} successfully from Type {1} !", memberInfo.ToString(), memberInfo.DeclaringType.ToString());
-                    return memberInspector;
                 }
                 else
                 {
                     //未找到合适的prefab，输出失败信息
-                    Interf.Instance.Print("Failed to find the valid prefab to draw the member by key of [{0}]", memberAttribute.Key);
+                    Interf.Instance.Print("Failed to find the valid prefab to inspect the member by key of [{0}]", inspectInfo.Key);
                 }
             }
-            return null;
-        }
-        public void Bind(object host, MemberInfo memberInfo, MemberAttribute memberAttribute, MemberInspector memberInspector)
-        {
-            var hostType = memberInfo.ReflectedType;
-            // 绑定该Field
-            memberAttribute.member = memberInfo;
-            //输出相应消息
-            Interf.Instance.Print("binding field {0} of type {1} in way of {2}", memberInfo.Name, hostType.Name, memberAttribute.Key);
+            return memberInspector;
         }
     }
 }

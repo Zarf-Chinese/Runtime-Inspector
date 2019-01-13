@@ -30,12 +30,12 @@ namespace RTI
         protected override void Start()
         {
             base.Start();
-            Utils.ModelizeInputFieldByType(this.inputField, this.memberAttribute.GetMemberType());
+            Utils.ModelizeInputFieldByType(this.inputField, this.inspectInfo.MemberType);
         }
         public override IEnumerator InputCoroutine()
         {
             yield return base.StartCoroutine(base.InputCoroutine());
-            this.memberAttribute.SetMemberData(this.Host, this.GetDataFromInput(this.inputField.text));
+            this.inspectInfo.SetMemberData(this.Host, this.GetDataFromInput(this.inputField.text));
         }
         public virtual object GetDataFromInput(string input)
         {
