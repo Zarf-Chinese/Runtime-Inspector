@@ -7,7 +7,10 @@ namespace RTI
 {
     public class InspectorManager : MonoBehaviour
     {
-        public InspectorBehaviour rootInspector;
+        /// <summary>
+        /// 检索器所处的根节点
+        /// </summary>
+        public RectTransform root;
         /// <summary>
         /// 检索器的配置
         /// </summary>
@@ -199,10 +202,13 @@ namespace RTI
         /// 检索该游戏对象，返回一个携带了DrawerBehaviour的UI游戏对象
         /// </summary>
         /// <param name="target"></param>
-        public virtual void Inspect(object target, string name)
+        public virtual GameObject Inspect(object target, string name)
         {
+            //根据根检索器预置创建一个根检索器
+            var rootInspectorObject = Instantiate(this.asset.rootInspectorPrefab, this.root);
+            var rootInspector = rootInspectorObject.GetComponent<InspectorBehaviour>();
             var hostType = target.GetType();
-            this.rootInspector.InspectName = name;
+            rootInspector.InspectName = name;
             //检查该object的每一个member
             foreach (var memberInfo in hostType.GetMembers())
             {
@@ -211,9 +217,10 @@ namespace RTI
                 if (memberDrawer)
                 {
                     //如果bind成功
-                    this.rootInspector.AddChild(memberDrawer);
+                    rootInspector.AddChild(memberDrawer);
                 }
             }
+            return rootInspectorObject;
         }
         /// <summary>
         /// 尝试从类型-检索关键词 的绑定表中寻找到适合该类型的关键词。

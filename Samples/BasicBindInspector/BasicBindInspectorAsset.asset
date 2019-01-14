@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf561b35e8c4c4b41bc43ff17d0594f5, type: 3}
   m_Name: BasicBindInspectorAsset
   m_EditorClassIdentifier: 
-  rootInspectorPrefab: {fileID: 0}
+  rootInspectorPrefab: {fileID: 3068097531885029662, guid: 0a0c004f34b9fbf49bf9743fc6a0aff4,
+    type: 3}
   memberInpectorPrefabList:
   - {fileID: 9156325524833134488, guid: cd46c5ebc01d9dc48974be9af65d2a4f, type: 3}
   - {fileID: 6034619605790600630, guid: 8e56153b00671944c83f2e3975e52f96, type: 3}

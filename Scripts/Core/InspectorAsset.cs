@@ -21,5 +21,7 @@ namespace RTI
         /// </summary>
         [Tooltip("要使用的BindAttribute的名字")]
         public List<string> activeBindNameList;
+
+        //fixme public
     }
 }
