@@ -19,12 +19,14 @@ namespace RTI
             (member as PropertyInfo).SetValue(host, value);
         }
         [RTI.RegistFilter("Bind", 5)]
-        static InspectorManager.InspectInfoFilter RegistFilter()
+        public static InspectorManager.InspectInfoFilter RegistFilter()
         {
             //注册一个通过类型绑定来实现的检索识别过滤器
             InspectorManager.InspectInfoFilter BindFilter = (InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo) =>
             {
-                if (!context.asset.Flags.Contains(InspectFlags.DisableBind) && inspectInfo == null)
+                if (!context.asset.Flags.Contains(InspectFlags.DisableBindProperty)
+                    && !context.asset.Flags.Contains(InspectFlags.DisableBind)
+                    && inspectInfo == null)
                 {
                     if (memberInfo.MemberType == MemberTypes.Property)
                     {

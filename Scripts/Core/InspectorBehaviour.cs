@@ -42,28 +42,42 @@ namespace RTI
         /// 向本索引器中添入次级索引器
         /// * **注意，不是所有索引器都对次级索引器的功能具有完善的支持！**
         /// </summary>
-        /// <param name="child"></param>
-        public virtual void AddChild(InspectorBehaviour child)
+        /// <param name="childInspector"></param>
+        public virtual void AddChild(InspectorBehaviour childInspector)
         {
-            var childTransform = (child.GetComponent<RectTransform>());
-            var childInspector = child.GetComponent<InspectorBehaviour>();
             this.Children.Add(childInspector);
-            childTransform.SetParent(Content, false);
+            childInspector.transform.SetParent(Content, false);
         }
         /// <summary>
         /// 从本索引器中移除该次级索引器
         /// * **注意，不是所有索引器都对次级索引器的功能具有完善的支持！**
         /// </summary>
-        /// <param name="child"></param>
-        public virtual void RemoveChild(InspectorBehaviour child)
+        /// <param name="childInspector"></param>
+        public virtual void RemoveChild(InspectorBehaviour childInspector, bool destroy = true)
         {
-            var childTransform = (child.GetComponent<RectTransform>());
-            var childInspector = child.GetComponent<InspectorBehaviour>();
-            if (this.Children.Contains(childInspector))
+            if (this.Children.Contains((InspectorBehaviour)childInspector))
             {
-                this.Children.Remove(childInspector);
+                this.Children.Remove((InspectorBehaviour)childInspector);
             }
-            childTransform.SetParent(null, false);
+            if (destroy)
+            {
+                Destroy(childInspector.gameObject);
+            }
+            else
+            {
+                childInspector.transform.SetParent(null, false);
+            }
+        }
+        /// <summary>
+        /// 清空所有子检索器
+        /// </summary>
+        /// <param name="destroy"></param>
+        public void ClearChildren(bool destroy = true)
+        {
+            foreach (var child in this.Children.AsReadOnly())
+            {
+                this.RemoveChild(child, destroy);
+            }
         }
     }
 }

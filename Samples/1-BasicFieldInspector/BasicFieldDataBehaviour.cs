@@ -20,9 +20,7 @@ public class BasicFieldDataBehaviour : MonoBehaviour
         Debug.Log(System.DateTime.Now);
         //初始化InspectorManager
         InspectorManager.Instance.Initialize();
-        Debug.Log(System.DateTime.Now);
         //指定一个要Inspect的对象
         InspectorManager.Instance.Inspect(this, "basic field data");
-        Debug.Log(System.DateTime.Now);
     }
 }

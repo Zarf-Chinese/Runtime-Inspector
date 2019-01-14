@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
@@ -7,6 +8,13 @@ namespace RTI
 {
     public class InspectorManager : MonoBehaviour
     {
+        public enum WorkState
+        {
+            Normal,
+            Initializing,
+            Inspecting
+        }
+        public WorkState CurrentWorkState { get; private set; }
         /// <summary>
         /// 检索器所处的根节点
         /// </summary>
@@ -87,7 +95,7 @@ namespace RTI
             this.InspectInfoFilterDictionary.Add(filter, index);
         }
         [RegistFilter("Attribute", 0)]
-        static InspectInfoFilter RegistFilter()
+        public static InspectInfoFilter RegistFilter()
         {
             //注册一个使用Attribute的检索识别过滤器
             InspectInfoFilter AttributeFilter = (InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo) =>
@@ -117,7 +125,7 @@ namespace RTI
         public void TryRegistFilter(Type type)
         {
             //搜索所有标注了RegistFilterAttribute的静态函数
-            foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
+            foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Public))
             {
                 var registFilterAttribute = Attribute.GetCustomAttribute(method, typeof(RegistFilterAttribute)) as RegistFilterAttribute;
                 if (registFilterAttribute != null)
@@ -187,8 +195,16 @@ namespace RTI
         /// * 重新检查所有存在的Binder并将检索器关键词与相应的类型进行重新绑定
         /// * 重新注册并排序过滤器
         /// </summary>
-        public virtual void Initialize()
+        public void Initialize() { this.StartCoroutine(this.InitializeCoroutine()); }
+
+        public virtual IEnumerator InitializeCoroutine()
         {
+            while (CurrentWorkState != WorkState.Normal)
+            {
+                //等待工作状态回归正常
+                yield return null;
+            }
+            CurrentWorkState = WorkState.Initializing;
             //清除缓存
             this.MemberAttributeTypes.Clear();
             if (this.UsedMemberInspectorPrefabs == null)
@@ -221,8 +237,10 @@ namespace RTI
 
             //清除检索器过滤器表
             this.InspectInfoFilterDictionary.Clear();
+            yield return null;
             //获取所有类型
             var types = Utils.GetAllTypes();
+            yield return null;
             //记录所有MemberAttribute类型
             foreach (var type in types)
             {
@@ -233,36 +251,56 @@ namespace RTI
                 }
 
             }
+
+            yield return null;
             //将检索器关键词-类型进行绑定
             foreach (var type in types)
             {
                 this.TryBind(type);
             }
+            yield return null;
             //注册所有过滤器
             foreach (var type in types)
             {
                 this.TryRegistFilter(type);
             }
+            yield return null;
             //确定检索器过滤器的使用顺序
             this.InspectorInfoFilterList = new List<InspectInfoFilter>();
             foreach (var pair in this.InspectInfoFilterDictionary.OrderBy((pair) => pair.Value))
             {
                 this.InspectorInfoFilterList.Add(pair.Key);
             }
+            CurrentWorkState = WorkState.Normal;
         }
+
         /// <summary>
-        /// 检索该游戏对象，返回一个携带了InspectorBehaviour的UI游戏对象
+        /// 检索该游戏对象，将在根节点上创建一个携带InspectorBehaviour的UI游戏对象
+        /// 如果不指定根节点，将会使用InspectorManager中的root属性作为根节点。
         /// </summary>
         /// <param name="target"></param>
-        public virtual GameObject Inspect(object target, string name)
+        public void Inspect(object target, string name, Transform root = null)
         {
+            //默认使用InspectManager自带的root作为根节点
+            if (root == null) { root = this.root; }
+            this.StartCoroutine(this.InspectCoroutine(target, name, root));
+        }
+        public virtual IEnumerator InspectCoroutine(object target, string name, Transform root)
+        {
+            //等待回到正常状态
+            while (CurrentWorkState != WorkState.Normal)
+            {
+                yield return null;
+            }
+            CurrentWorkState = WorkState.Inspecting;
             //根据根检索器预置创建一个根检索器
-            var rootInspectorObject = Instantiate(this.asset.rootInspectorPrefab, this.root);
+            var rootInspectorObject = Instantiate(this.asset.rootInspectorPrefab, root);
             var rootInspector = rootInspectorObject.GetComponent<InspectorBehaviour>();
             var hostType = target.GetType().GetTypeInfo();
             rootInspector.InspectName = name;
             //检查该object的每一个member
             var members = hostType.GetMembers(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public);
+            yield return null;
             foreach (var memberInfo in members)
             {
                 //检查并尝试bind该member
@@ -271,9 +309,10 @@ namespace RTI
                 {
                     //如果bind成功
                     rootInspector.AddChild(memberInspector);
+                    yield return null;
                 }
             }
-            return rootInspectorObject;
+            CurrentWorkState = WorkState.Normal;
         }
         /// <summary>
         /// 尝试从类型-检索关键词 的绑定表中寻找到适合该类型的关键词。
@@ -303,15 +342,15 @@ namespace RTI
         /// </summary>
         public void TryBind(Type type)
         {
-            foreach (var member in type.GetMembers())
+            foreach (var field in type.GetFields(BindingFlags.Static | BindingFlags.Public))
             {
-                BindAttribute bindAttribute = Attribute.GetCustomAttribute(member, typeof(BindAttribute)) as BindAttribute;
+                BindAttribute bindAttribute = Attribute.GetCustomAttribute(field, typeof(BindAttribute)) as BindAttribute;
                 if (bindAttribute != null && this.asset.activeBindNameList.Contains(bindAttribute.name))
                 {
                     //如果BindAttribute被定义，并且被使用
                     try
                     {
-                        var value = (member as FieldInfo).GetValue(type);
+                        var value = field.GetValue(type);
                         var binders = (IEnumerable<Binder>)value;
                         //执行bind
                         foreach (var binder in binders)
@@ -326,7 +365,7 @@ namespace RTI
                     catch (Exception e)
                     {
                         //类型转换失败
-                        Interf.Instance.Print("Failed to cast the BindList {0} as IEnumerable<BInder>!", member);
+                        Interf.Instance.Print("Failed to cast the BindList {0} as IEnumerable<BInder>!", field);
                     }
                 }
             }
@@ -338,7 +377,7 @@ namespace RTI
         /// <param name="host"></param>
         /// <param name="memberInfo"></param>
         /// <returns></returns>
-        public InspectorBehaviour TryInspect(object host, MemberInfo memberInfo)
+        public MemberInspector TryInspect(object host, MemberInfo memberInfo)
         {
             InspectInfo inspectInfo = null;
             for (var i = 0; i < InspectorInfoFilterList.Count; i++)

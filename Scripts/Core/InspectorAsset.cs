@@ -5,14 +5,15 @@ namespace RTI
     public enum InspectFlags
     {
         DisableMemberAttribute,
-        PublicOnly,
+        BindPublicOnly,
+        DisableBindProperty,
         DisableBind
     }
     [CreateAssetMenu()]
     public class InspectorAsset : ScriptableObject
     {
         /// <summary>
-        /// fixme 根检索器预置
+        /// 根检索器预置
         /// </summary>
         [Tooltip("要使用的根检索器预置")]
         public GameObject rootInspectorPrefab;
