@@ -69,33 +69,71 @@ namespace RTI
         /// <param name="host">宿主对象</param>
         /// <param name="memberInfo">要尝试检索的类成员信息</param>
         /// <param name="inspectInfo">上一个过滤器得到的检索信息，同时也会传给下一个过滤器</param>
-        public delegate void InspectInfoFilter(InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo);
+        public delegate bool InspectInfoFilter(InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo);
         /// <summary>
         /// 检索识别过滤器列表。
         /// InspectorManager在判断是否要识别并检索某个Member时，会从前向后逐个执行每个过滤器，
         /// 如果过滤器最终没有得到合法的检索信息，则表明该Member不可被检索。
-        /// 过滤器列表是静态的，你可以使用[UnityEngine.RuntimeInitializeOnLoadMethodAttribute]标记来在游戏开始时注册新的过滤器
+        /// 如果过滤器返回false，将继续下一次过滤。
+        /// 如果过滤器返回true，将终止过滤
+        /// 你可以使用[RegistFilter]标记来注册新的过滤器
         /// </summary>
         /// <typeparam name="InspectInfoFilter"></typeparam>
         /// <returns></returns>
-        public static List<InspectInfoFilter> InspectInfoFilters { get; } = new List<InspectInfoFilter>();
-
-        static InspectorManager()
+        public Dictionary<InspectInfoFilter, int> InspectInfoFilterDictionary { get; } = new Dictionary<InspectInfoFilter, int>();
+        public List<InspectInfoFilter> InspectorInfoFilterList;
+        public void RegistInspectInfoFilter(InspectInfoFilter filter, int index)
+        {
+            this.InspectInfoFilterDictionary.Add(filter, index);
+        }
+        [RegistFilter("Attribute", 0)]
+        static InspectInfoFilter RegistFilter()
         {
             //注册一个使用Attribute的检索识别过滤器
             InspectInfoFilter AttributeFilter = (InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo) =>
             {
                 //若inspectInfo尚未定义
-                if (inspectInfo == null)
+                if ((!context.asset.Flags.Contains(InspectFlags.DisableMemberAttribute)) && inspectInfo == null)
                 {
-                    var memberAttribute = memberInfo.GetCustomAttribute<MemberAttribute>(true);
-                    if (memberAttribute != null)
+                    foreach (var memberAttributeType in context.MemberAttributeTypes)
                     {
-                        inspectInfo = memberAttribute.inspectInfo;
+                        var memberAttribute = memberInfo.GetCustomAttribute(memberAttributeType) as MemberAttribute;
+                        if (memberAttribute != null)
+                        {
+                            //如果该Member上标记了某种MemberAttribute
+                            inspectInfo = memberAttribute.inspectInfo;
+                            return true;
+                        }
                     }
                 }
+                return false;
             };
-            InspectInfoFilters.Add(AttributeFilter);
+            return AttributeFilter;
+        }
+        /// <summary>
+        /// 尝试获取并执行这个类型中的过滤器注册函数
+        /// </summary>
+        /// <param name="methodInfo"></param>
+        public void TryRegistFilter(Type type)
+        {
+            //搜索所有标注了RegistFilterAttribute的静态函数
+            foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
+            {
+                var registFilterAttribute = Attribute.GetCustomAttribute(method, typeof(RegistFilterAttribute)) as RegistFilterAttribute;
+                if (registFilterAttribute != null)
+                {
+                    //如果这个函数标注了 registFilterAttribute
+                    try
+                    {
+                        var filter = method.Invoke(type, null) as InspectInfoFilter;
+                        this.InspectInfoFilterDictionary.Add(filter, registFilterAttribute.index);
+                    }
+                    catch
+                    {
+                        throw new Exception("Failed to regist the target filter! :" + method);
+                    }
+                }
+            }
         }
         /// <summary>
         /// 为该key在注册表中所有检索器预制体中寻找一个最合适的检索器预置。
@@ -147,6 +185,7 @@ namespace RTI
         /// * 重新检查并移除所有不合法的检索器预置
         /// * 重置对所有已使用检索关键词-检索器预置的相关缓存
         /// * 重新检查所有存在的Binder并将检索器关键词与相应的类型进行重新绑定
+        /// * 重新注册并排序过滤器
         /// </summary>
         public virtual void Initialize()
         {
@@ -180,6 +219,8 @@ namespace RTI
                 this.UnBindedTypesCache.Clear();
             }
 
+            //清除检索器过滤器表
+            this.InspectInfoFilterDictionary.Clear();
             //获取所有类型
             var types = Utils.GetAllTypes();
             //记录所有MemberAttribute类型
@@ -197,9 +238,20 @@ namespace RTI
             {
                 this.TryBind(type);
             }
+            //注册所有过滤器
+            foreach (var type in types)
+            {
+                this.TryRegistFilter(type);
+            }
+            //确定检索器过滤器的使用顺序
+            this.InspectorInfoFilterList = new List<InspectInfoFilter>();
+            foreach (var pair in this.InspectInfoFilterDictionary.OrderBy((pair) => pair.Value))
+            {
+                this.InspectorInfoFilterList.Add(pair.Key);
+            }
         }
         /// <summary>
-        /// 检索该游戏对象，返回一个携带了DrawerBehaviour的UI游戏对象
+        /// 检索该游戏对象，返回一个携带了InspectorBehaviour的UI游戏对象
         /// </summary>
         /// <param name="target"></param>
         public virtual GameObject Inspect(object target, string name)
@@ -207,17 +259,18 @@ namespace RTI
             //根据根检索器预置创建一个根检索器
             var rootInspectorObject = Instantiate(this.asset.rootInspectorPrefab, this.root);
             var rootInspector = rootInspectorObject.GetComponent<InspectorBehaviour>();
-            var hostType = target.GetType();
+            var hostType = target.GetType().GetTypeInfo();
             rootInspector.InspectName = name;
             //检查该object的每一个member
-            foreach (var memberInfo in hostType.GetMembers())
+            var members = hostType.GetMembers(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public);
+            foreach (var memberInfo in members)
             {
                 //检查并尝试bind该member
-                var memberDrawer = TryInspect(target, memberInfo);
-                if (memberDrawer)
+                var memberInspector = TryInspect(target, memberInfo);
+                if (memberInspector)
                 {
                     //如果bind成功
-                    rootInspector.AddChild(memberDrawer);
+                    rootInspector.AddChild(memberInspector);
                 }
             }
             return rootInspectorObject;
@@ -288,9 +341,14 @@ namespace RTI
         public InspectorBehaviour TryInspect(object host, MemberInfo memberInfo)
         {
             InspectInfo inspectInfo = null;
-            foreach (var inspectInfoFilter in InspectInfoFilters)
+            for (var i = 0; i < InspectorInfoFilterList.Count; i++)
             {
-                inspectInfoFilter(this, host, memberInfo, ref inspectInfo);
+                //依次执行所有过滤器
+                if (InspectorInfoFilterList[i](this, host, memberInfo, ref inspectInfo))
+                {
+                    //过滤器返回true，表明过滤终止
+                    break;
+                }
             }
             if (inspectInfo != null)
             {
@@ -313,8 +371,8 @@ namespace RTI
                 if (prefab)
                 {
                     //生成memberInspector，并完成绑定工作
-                    var memberDrawerObject = Instantiate(prefab);
-                    memberInspector = memberDrawerObject.GetComponent<MemberInspector>();
+                    var memberInspectorObject = Instantiate(prefab);
+                    memberInspector = memberInspectorObject.GetComponent<MemberInspector>();
                     if (!memberInspector)
                     {
                         throw new Exception("在目标检索器预制体中找不到合法的MemberInspector组件！");

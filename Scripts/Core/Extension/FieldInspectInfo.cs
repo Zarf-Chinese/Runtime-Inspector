@@ -18,13 +18,13 @@ namespace RTI
         {
             (member as FieldInfo).SetValue(host, value);
         }
-        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute]
-        static void RegistFilter()
+        [RTI.RegistFilter("Bind", 5)]
+        static InspectorManager.InspectInfoFilter RegistFilter()
         {
             //注册一个通过类型绑定来实现的检索识别过滤器
             InspectorManager.InspectInfoFilter BindFilter = (InspectorManager context, object host, MemberInfo memberInfo, ref InspectInfo inspectInfo) =>
             {
-                if (inspectInfo == null)
+                if (!context.asset.Flags.Contains(InspectFlags.DisableBind) && inspectInfo == null)
                 {
                     //如果类成员是 field
                     if (memberInfo.MemberType == MemberTypes.Field)
@@ -40,8 +40,9 @@ namespace RTI
                         }
                     }
                 }
+                return false;
             };
-            InspectorManager.InspectInfoFilters.Add(BindFilter);
+            return (BindFilter);
         }
     }
 }

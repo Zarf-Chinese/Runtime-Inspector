@@ -95,11 +95,11 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 1
     m_MinSize: 10
-    m_MaxSize: 30
-    m_Alignment: 3
+    m_MaxSize: 20
+    m_Alignment: 0
     m_AlignByGeometry: 0
     m_RichText: 0
-    m_HorizontalOverflow: 1
+    m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: text
@@ -223,7 +223,7 @@ MonoBehaviour:
   m_InputType: 0
   m_AsteriskChar: 42
   m_KeyboardType: 0
-  m_LineType: 0
+  m_LineType: 2
   m_HideMobileInput: 0
   m_CharacterValidation: 0
   m_CharacterLimit: 0
@@ -262,7 +262,7 @@ MonoBehaviour:
   m_PreferredWidth: -1
   m_PreferredHeight: -1
   m_FlexibleWidth: -1
-  m_FlexibleHeight: -1
+  m_FlexibleHeight: 20
   m_LayoutPriority: 1
 --- !u!1001 &4004409732203264516
 PrefabInstance:
@@ -275,6 +275,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: InputInspector
+      objectReference: {fileID: 0}
+    - target: {fileID: 117184538695866094, guid: fd5b4ccf7082f444aaa0d0f2388e47b7,
+        type: 3}
+      propertyPath: m_MinHeight
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 5225100128524885405, guid: fd5b4ccf7082f444aaa0d0f2388e47b7,
         type: 3}
@@ -349,7 +354,7 @@ PrefabInstance:
     - target: {fileID: 5225100128524885405, guid: fd5b4ccf7082f444aaa0d0f2388e47b7,
         type: 3}
       propertyPath: m_SizeDelta.y
-      value: 25
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 5225100128524885405, guid: fd5b4ccf7082f444aaa0d0f2388e47b7,
         type: 3}

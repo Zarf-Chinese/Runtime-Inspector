@@ -2,6 +2,12 @@ using UnityEngine;
 using System.Collections.Generic;
 namespace RTI
 {
+    public enum InspectFlags
+    {
+        DisableMemberAttribute,
+        PublicOnly,
+        DisableBind
+    }
     [CreateAssetMenu()]
     public class InspectorAsset : ScriptableObject
     {
@@ -22,6 +28,7 @@ namespace RTI
         [Tooltip("要使用的BindAttribute的名字")]
         public List<string> activeBindNameList;
 
-        //fixme public
+
+        public List<InspectFlags> Flags;
     }
 }

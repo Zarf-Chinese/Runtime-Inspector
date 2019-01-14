@@ -13,6 +13,6 @@ public class BasicBindDataBehaviour : MonoBehaviour
     void Start()
     {
         InspectorManager.Instance.Initialize();
-        InspectorManager.Instance.Inspect(this, "object name");
+        InspectorManager.Instance.Inspect(this, "basic bind data");
     }
 }
