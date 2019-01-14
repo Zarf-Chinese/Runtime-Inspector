@@ -2,6 +2,7 @@
 
 -   作者/author 张和(zarf)
 -   版本/version 0.8
+-   指导老师/tutor 黄东晋
 
 ## 简介
 
